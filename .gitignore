@@ -1,0 +1,22 @@
+# .NET Core
+bin/
+obj/
+*.csproj.user
+*.sln
+
+# Visual Studio / IDE
+.vs/
+.vscode/
+*.suo
+*.swp
+
+# NuGet Packages
+packages/
+
+# Logs and temp files
+*.log
+*.tmp
+
+# OS generated files
+.DS_Store
+Thumbs.db

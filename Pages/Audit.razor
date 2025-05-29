@@ -1,0 +1,98 @@
+@page "/audit"
+@inject LAPS_WebUI.Services.AuditService AuditService
+
+<h3>Журнал дій</h3>
+
+<EditForm Model="@filterModel" OnValidSubmit="ApplyFilter">
+    <DataAnnotationsValidator />
+    <div class="form-group">
+        <label>Користувач</label>
+        <InputText class="form-control" @bind-Value="filterModel.Username" placeholder="Введіть ім'я користувача" />
+    </div>
+    <div class="form-group">
+        <label>Дія</label>
+        <InputText class="form-control" @bind-Value="filterModel.Action" placeholder="Наприклад: Вхід, Перегляд пароля" />
+    </div>
+    <div class="form-group">
+        <label>Об'єкт</label>
+        <InputText class="form-control" @bind-Value="filterModel.Target" placeholder="Наприклад: ім'я комп'ютера" />
+    </div>
+    <div class="form-group">
+        <label>Дата (від)</label>
+        <InputDate class="form-control" @bind-Value="filterModel.DateFrom" />
+    </div>
+    <div class="form-group">
+        <label>Дата (до)</label>
+        <InputDate class="form-control" @bind-Value="filterModel.DateTo" />
+    </div>
+    <button class="btn btn-primary" type="submit">Застосувати фільтр</button>
+    <button class="btn btn-secondary" @onclick="ClearFilter">Очистити</button>
+</EditForm>
+
+@if (!filteredEntries.Any())
+{
+    <p>Журнал порожній або записи не знайдені.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Користувач</th>
+                <th>Дія</th>
+                <th>Об'єкт</th>
+                <th>Час</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var entry in filteredEntries)
+            {
+                <tr>
+                    <td>@entry.Username</td>
+                    <td>@entry.Action</td>
+                    <td>@entry.Target</td>
+                    <td>@entry.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private AuditFilterModel filterModel = new();
+    private IEnumerable<AuditEntry> filteredEntries = new List<AuditEntry>();
+
+    protected override void OnInitialized()
+    {
+        // Ініціалізація: показати всі записи
+        filteredEntries = AuditService.GetEntries();
+    }
+
+    private void ApplyFilter()
+    {
+        var entries = AuditService.GetEntries();
+
+        filteredEntries = entries.Where(e =>
+            (string.IsNullOrEmpty(filterModel.Username) || e.Username.Contains(filterModel.Username, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrEmpty(filterModel.Action) || e.Action.Contains(filterModel.Action, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrEmpty(filterModel.Target) || e.Target.Contains(filterModel.Target, StringComparison.OrdinalIgnoreCase)) &&
+            (!filterModel.DateFrom.HasValue || e.Timestamp >= filterModel.DateFrom.Value) &&
+            (!filterModel.DateTo.HasValue || e.Timestamp <= filterModel.DateTo.Value.AddDays(1).AddTicks(-1))
+        ).ToList();
+    }
+
+    private void ClearFilter()
+    {
+        filterModel = new AuditFilterModel();
+        filteredEntries = AuditService.GetEntries();
+    }
+
+    private class AuditFilterModel
+    {
+        public string Username { get; set; } = string.Empty;
+        public string Action { get; set; } = string.Empty;
+        public string Target { get; set; } = string.Empty;
+        public DateTime? DateFrom { get; set; }
+        public DateTime? DateTo { get; set; }
+    }
+}
